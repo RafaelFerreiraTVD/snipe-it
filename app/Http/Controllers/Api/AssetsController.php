@@ -235,13 +235,20 @@ class AssetsController extends Controller
 
         }
 
-
-        if ((!is_null($filter)) && (count($filter)) > 0) {
-            $assets->ByFilter($filter);
-        } elseif ($request->filled('search')) {
-            $assets->TextSearch($request->input('search'));
+        $category = null;
+        if ($request->filled('category')) {
+            $category = $request->input('category');
         }
 
+        if(!is_null($category)) {
+            $assets->InCategory($category);
+        }else {
+            if ((!is_null($filter)) && (count($filter)) > 0) {
+                $assets->ByFilter($filter);
+            } elseif ($request->filled('search')) {
+                $assets->TextSearch($request->input('search'));
+            }
+        }
 
         // This is kinda gross, but we need to do this because the Bootstrap Tables
         // API passes custom field ordering as custom_fields.fieldname, and we have to strip

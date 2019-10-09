@@ -564,6 +564,54 @@
         });
     });
 
+    $(() => {
+       $('#category').change(() => {
+           $('.snipe-table').bootstrapTable('destroy').bootstrapTable({
+               classes: 'table table-responsive table-no-bordered',
+               ajaxOptions: {
+                   headers: {
+                       'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                   }
+               },
+               queryParams: {
+                   category: $('#category option:selected').val()
+               },
+               stickyHeader: true,
+               stickyHeaderOffsetY:  '0px',
+
+               undefinedText: '',
+               iconsPrefix: 'fa',
+               cookie: true,
+               cookieExpire: '2y',
+               cookieIdTable: '{{ Route::currentRouteName() }}',
+               mobileResponsive: true,
+               maintainSelected: true,
+               trimOnSearch: false,
+               paginationFirstText: "{{ trans('general.first') }}",
+               paginationLastText: "{{ trans('general.last') }}",
+               paginationPreText: "{{ trans('general.previous') }}",
+               paginationNextText: "{{ trans('general.next') }}",
+               pageList: ['10','20', '30','50','100','150','200', '500'],
+               pageSize: {{  (($snipeSettings->per_page!='') && ($snipeSettings->per_page > 0)) ? $snipeSettings->per_page : 20 }},
+               paginationVAlign: 'both',
+               formatLoadingMessage: function () {
+                   return '<h4><i class="fa fa-spinner fa-spin" aria-hidden="true"></i> Loading... please wait.... </h4>';
+               },
+
+               icons: {
+                   advancedSearchIcon: 'fa fa-search-plus',
+                   paginationSwitchDown: 'fa-caret-square-o-down',
+                   paginationSwitchUp: 'fa-caret-square-o-up',
+                   columns: 'fa-columns',
+                   refresh: 'fa-refresh'
+               },
+               exportTypes: ['csv', 'excel', 'doc', 'txt','json', 'xml', 'pdf'],
+
+
+           });
+       });
+    });
+
 
     // This is necessary to make the bootstrap tooltips work inside of the
     // wenzhixin/bootstrap-table formatters
