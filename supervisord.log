@@ -1,0 +1,42 @@
+2019-10-09 09:58:33,864 CRIT Supervisor running as root (no user in config file)
+2019-10-09 09:58:33,866 INFO supervisord started with pid 1
+2019-10-09 09:58:34,868 INFO spawned: 'exit_on_any_fatal' with pid 20
+2019-10-09 09:58:34,871 INFO spawned: 'apache' with pid 21
+2019-10-09 09:58:34,874 INFO spawned: 'run_schedule' with pid 22
+2019-10-09 09:58:36,320 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 09:58:36,321 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 09:58:36,321 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 09:58:39,099 WARN received SIGTERM indicating exit request
+2019-10-09 09:58:39,099 INFO waiting for apache, exit_on_any_fatal, run_schedule to die
+2019-10-09 09:58:39,100 INFO stopped: run_schedule (terminated by SIGTERM)
+2019-10-09 09:58:39,100 INFO stopped: apache (terminated by SIGTERM)
+2019-10-09 09:58:39,102 INFO stopped: exit_on_any_fatal (terminated by SIGTERM)
+2019-10-09 09:58:47,158 CRIT Supervisor running as root (no user in config file)
+2019-10-09 09:58:47,164 INFO supervisord started with pid 1
+2019-10-09 09:58:48,172 INFO spawned: 'exit_on_any_fatal' with pid 16
+2019-10-09 09:58:48,173 INFO spawned: 'apache' with pid 17
+2019-10-09 09:58:48,175 INFO spawned: 'run_schedule' with pid 18
+2019-10-09 09:58:49,372 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 09:58:49,373 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 09:58:49,373 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 10:00:39,582 CRIT Supervisor running as root (no user in config file)
+2019-10-09 10:00:39,590 INFO supervisord started with pid 1
+2019-10-09 10:00:40,596 INFO spawned: 'exit_on_any_fatal' with pid 20
+2019-10-09 10:00:40,606 INFO spawned: 'apache' with pid 21
+2019-10-09 10:00:40,619 INFO spawned: 'run_schedule' with pid 22
+2019-10-09 10:00:41,721 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 10:00:41,722 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 10:00:41,723 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 10:25:01,022 WARN received SIGTERM indicating exit request
+2019-10-09 10:25:01,025 INFO waiting for apache, exit_on_any_fatal, run_schedule to die
+2019-10-09 10:25:02,032 INFO stopped: run_schedule (terminated by SIGTERM)
+2019-10-09 10:25:02,081 INFO stopped: apache (terminated by SIGTERM)
+2019-10-09 10:25:02,097 INFO stopped: exit_on_any_fatal (terminated by SIGTERM)
+2019-10-09 13:56:27,006 CRIT Supervisor running as root (no user in config file)
+2019-10-09 13:56:27,014 INFO supervisord started with pid 1
+2019-10-09 13:56:28,023 INFO spawned: 'exit_on_any_fatal' with pid 16
+2019-10-09 13:56:28,037 INFO spawned: 'apache' with pid 17
+2019-10-09 13:56:28,042 INFO spawned: 'run_schedule' with pid 18
+2019-10-09 13:56:29,195 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 13:56:29,196 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2019-10-09 13:56:29,197 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
