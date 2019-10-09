@@ -288,7 +288,7 @@ class AssetsController extends Controller
                 break;
         }
 
-        
+
         $total = $assets->count();
         $assets = $assets->skip($offset)->take($limit)->get();
         return (new AssetsTransformer)->transformAssets($assets, $total);
