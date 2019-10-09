@@ -44,10 +44,7 @@
 @section('header_right')
   <a href="{{ route('reports/custom') }}" style="margin-right: 5px;" class="btn btn-default">
     Custom Export</a>
-  @can('create', \App\Models\Asset::class)
   <a href="{{ route('hardware.create') }}" class="btn btn-primary pull-right"></i> {{ trans('general.create') }}</a>
-  @endcan
-
 @stop
 
 {{-- Page content --}}
@@ -67,11 +64,19 @@
               @if (Input::get('status')!='Deleted')
               <div id="toolbar">
                 <select name="bulk_actions" class="form-control select2">
-                  <option value="edit">{{ trans('button.edit') }}</option>
-                  <option value="delete">{{ trans('button.delete') }}</option>
-                  <option value="labels">{{ trans_choice('button.generate_labels', 2) }}</option>
+                  <option value="edit">Edit</option>
+                  <option value="delete">Delete</option>
+                  <option value="labels">Generate Labels</option>
                 </select>
                 <button class="btn btn-primary" id="bulkEdit" disabled>Go</button>
+                <label for="category" style="margin-left: 30px;margin-right: 10px">
+                  Category:
+                </label>
+                <select id="category" name="category" class="form-control select2">
+                  @foreach ($categories as $category)
+                    <option value="{{$category->id}}">{{$category->name}}</option>
+                  @endforeach
+                </select>
               </div>
               @endif
 
