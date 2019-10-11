@@ -349,9 +349,9 @@ class ViewAssetsController extends Controller
     }
 
     // Save the acceptance
-    public function postAcceptAsset(Request $request, $logID = null)
+    public function postAcceptAsset(Request $request)
     {
-        $logs = json_decode(urldecode(base64_decode($request->get('logId'))));
+        $logs = json_decode(base64_decode(urldecode($request->get('logId'))));
         list($logaction_msg, $accepted, $return_msg) = $this->getAcceptanceStatus();
 
         foreach ($logs as $log) {
