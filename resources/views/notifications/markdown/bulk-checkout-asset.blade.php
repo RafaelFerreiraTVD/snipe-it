@@ -5,7 +5,7 @@
 
 @component('mail::table')
 
-| Image |{{ trans('mail.asset_name') }}|{{ trans('mail.asset_tag') }}| {{ trans('general.manufacturer') }} | {{ trans('general.asset_model') }} | {{ trans('general.model_no') }} | {{ trans('mail.serial') }} |
+| {{ trans('general.image') }} |{{ trans('mail.asset_name') }}|{{ trans('mail.asset_tag') }}| {{ trans('general.manufacturer') }} | {{ trans('general.asset_model') }} | {{ trans('general.model_no') }} | {{ trans('mail.serial') }} |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | | | | | | | |
 @foreach($assets as $asset)

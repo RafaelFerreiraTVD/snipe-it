@@ -21,12 +21,12 @@ class BulkAssetsController extends Controller
 
     /**
      * Display the bulk edit page.
+     * @since [v2.0]
+     * @author [A. Gianotto] [<snipe@snipe.net>]
      *
      * @return View
      * @throws AuthorizationException
      * @internal param int $assetId
-     * @since [v2.0]
-     * @author [A. Gianotto] [<snipe@snipe.net>]
      */
     public function edit(Request $request)
     {
@@ -198,7 +198,6 @@ class BulkAssetsController extends Controller
         try {
             $admin = Auth::user();
 
-            /** @var SnipeModel $target */
             $target = $this->determineCheckoutTarget();
 
             if (!is_array($request->get('selected_assets'))) {
@@ -224,12 +223,10 @@ class BulkAssetsController extends Controller
             }
 
             $errors = [];
-            /** DB */
             DB::transaction(function () use ($target, $admin, $checkout_at, $expected_checkin, $errors, $asset_ids, $request) {
                 $isBulkCheckoutEmail = $request->filled('bulk_email');
                 $note = $request->get('note');
 
-                /** @var Asset[] $assetList */
                 $assetList = [];
                 foreach ($asset_ids as $key => $asset_id) {
                     /* @var Asset $asset */
@@ -249,6 +246,8 @@ class BulkAssetsController extends Controller
                         $log_id
                     );
 
+                    // this is used only for bulk notification on BulkCheckoutAssetNotification
+                    /* @see BulkCheckoutAssetNotification::toMail() */
                     $assetList[$key]['log_id'] = $log_id;
 
                     if ($target->location_id !='') {
@@ -261,7 +260,8 @@ class BulkAssetsController extends Controller
                         array_merge_recursive($errors, $asset->getErrors()->toArray());
                     }
                 }
-                // send only 1 email with all assets
+
+                // send only 1 email with all assets to approve
                 if ($isBulkCheckoutEmail) {
                     $checkin_out_dates = [
                       'checkout' => $checkout_at,

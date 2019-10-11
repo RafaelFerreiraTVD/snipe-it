@@ -206,44 +206,28 @@ class ViewAssetsController extends Controller
         return view('account/requested');
     }
 
+
     public function getBulkAcceptAssets($logsAssets)
     {
         $assetsIds = json_decode(urldecode(base64_decode($logsAssets)));
 
-        $assetLogs = [];
+        $findlogs = [];
         foreach ($assetsIds as $assetId) {
-            $assetLogs[] = Actionlog::where('id', $assetId)->first();
+            $findlogs[] = Actionlog::where('id', $assetId)->first();
         }
 
-        if (sizeof($assetLogs) != sizeof($assetsIds)) {
+        if (sizeof($findlogs) != sizeof($assetsIds)) {
              return redirect()->to('account/view-assets')->with('error', 'No matching records.');
         }
 
-        $user = Auth::user();
-
         $errors = null;
         $assetList = [];
-        foreach ($assetLogs as $assetlog) {
-            if (!empty($assetlog->accepted_id)) {
-                return redirect()->to('account/view-assets')->with('error', trans('admin/users/message.error.asset_already_accepted'));
-            }
-            if (($assetlog->item_type==Asset::class) && ($user->id != $assetlog->item->assigned_to)) {
-                return redirect()->to('account/view-assets')->with('error', trans('admin/users/message.error.incorrect_user_accepted'));
-            }
-            if (is_null($assetlog->item)) {
-                return redirect()->to('account')->with('error', trans('admin/hardware/message.does_not_exist'));
-            } elseif (!Company::isCurrentUserHasAccess($assetlog->item)) {
-                return redirect()->route('requestable-assets')->with('error', trans('general.insufficient_permissions'));
-            }
-
-            $assetList[] = $assetlog->item;
-        }
-
         $eula = null;
-        foreach ($assetList as $asset) {
-            $eula = $asset->getEula();
 
-            if (!is_null($eula)) break;
+        foreach ($findlogs as $log) {
+            $this->redirectOnError($log);
+            $assetList[] = $log->item;
+            $eula = is_null($eula) ? $log->item->getEula() : $eula;
         }
 
         $data = [
@@ -258,58 +242,45 @@ class ViewAssetsController extends Controller
     // Get the acceptance screen
     public function getAcceptAsset($logID = null)
     {
-
         $findlog = Actionlog::where('id', $logID)->first();
 
         if (!$findlog) {
             return redirect()->to('account/view-assets')->with('error', 'No matching record.');
         }
 
-        if ($findlog->accepted_id!='') {
-            return redirect()->to('account/view-assets')->with('error', trans('admin/users/message.error.asset_already_accepted'));
-        }
+        $this->redirectOnError($findlog);
 
-        $user = Auth::user();
+        $logObj = array($logID);
+        $data = [
+            "ids" => urlencode(base64_encode(json_encode($logObj))),
+            "eula" => $findlog->item->getEula(),
+            "name" => $findlog->item->present()->name()
+        ];
 
-
-        // TODO - Fix this for non-assets
-        if (($findlog->item_type==Asset::class) && ($user->id != $findlog->item->assigned_to)) {
-            return redirect()->to('account/view-assets')->with('error', trans('admin/users/message.error.incorrect_user_accepted'));
-        }
-
-
-        $item = $findlog->item;
-
-        // Check if the asset exists
-        if (is_null($item)) {
-            // Redirect to the asset management page
-            return redirect()->to('account')->with('error', trans('admin/hardware/message.does_not_exist'));
-        } elseif (!Company::isCurrentUserHasAccess($item)) {
-            return redirect()->route('requestable-assets')->with('error', trans('general.insufficient_permissions'));
-        } else {
-            $logObj = array($logID);
-            $data = [
-                "ids" => urlencode(base64_encode(json_encode($logObj))),
-                "eula" => $item->getEula(),
-                "name" => $item->present()->name()
-            ];
-            return view('account/accept-asset', $data);
-        }
+        return view('account/accept-asset', $data);
     }
 
-    public function redirectOnError($log) {
+    public function redirectOnError($log)
+    {
         // Check if the asset exists
         if (is_null($log)) {
             // Redirect to the asset management page
             return redirect()->to('account/view-assets')->with('error', trans('admin/hardware/message.does_not_exist'));
         }
-        if ($log->accepted_id!='') {
+        if (!empty($log->accepted_id)) {
             // Redirect to the asset management page
             return redirect()->to('account/view-assets')->with('error', trans('admin/users/message.error.asset_already_accepted'));
         }
 
         if (!Input::has('asset_acceptance')) {
             return redirect()->back()->with('error', trans('admin/users/message.error.accept_or_decline'));
+        }
+        if (is_null($log->item)) {
+            return redirect()->to('account')->with('error', trans('admin/hardware/message.does_not_exist'));
+        }
+
+        if (!Company::isCurrentUserHasAccess($log->item)) {
+            return redirect()->route('requestable-assets')->with('error', trans('general.insufficient_permissions'));
         }
 
         $user = Auth::user();
@@ -319,7 +290,8 @@ class ViewAssetsController extends Controller
 
     }
 
-    private function saveSignature($log, $signatureOutput) {
+    private function saveSignature($log, $signatureOutput)
+    {
         $path = config('app.private_uploads').'/signatures';
         $sig_filename = "siglog-".$log->id.'-'.date('Y-m-d-his').".png";
         $data_uri = e($signatureOutput);
@@ -328,8 +300,9 @@ class ViewAssetsController extends Controller
         file_put_contents($path."/".$sig_filename, $decoded_image);
     }
 
-    private function getAcceptanceStatus() {
-        if (Input::get('asset_acceptance')=='accepted') {
+    private function getAcceptanceStatus()
+    {
+        if (Input::get('asset_acceptance') == 'accepted') {
             $logaction_msg  = 'accepted';
             $accepted="accepted";
             $return_msg = trans('admin/users/message.accepted');
@@ -342,14 +315,15 @@ class ViewAssetsController extends Controller
         return [$logaction_msg, $accepted, $return_msg];
     }
 
-    private function logAction($log, $logaction_msg) {
+    private function logAction($log, $logaction_msg)
+    {
         $logaction = new Actionlog();
 
-        $logaction->item_id      = $log->item_id;
-        $logaction->item_type    = $log->item_type;
+        $logaction->item_id = $log->item_id;
+        $logaction->item_type = $log->item_type;
 
         // Asset
-        if (($log->item_id!='') && ($log->item_type==Asset::class)) {
+        if (!empty($log->item_id) && ($log->item_type == Asset::class)) {
             if (Input::get('asset_acceptance')!='accepted') {
                 DB::table('assets')
                     ->where('id', $log->item_id)
@@ -361,7 +335,6 @@ class ViewAssetsController extends Controller
         $logaction->target_type = User::class;
         $logaction->note = e(Input::get('note'));
         $logaction->updated_at = date("Y-m-d H:i:s");
-
 
         if (isset($sig_filename)) {
             $logaction->accept_signature = $sig_filename;
@@ -391,7 +364,7 @@ class ViewAssetsController extends Controller
 
             list($update_checkout, $affected_asset) = $this->logAction($findlog, $logaction_msg);
 
-            if (($findlog->item_id!='') && ($findlog->item_type==Asset::class)) {
+            if (!empty($findlog->item_id) && ($findlog->item_type==Asset::class)) {
                 $affected_asset->accepted = $accepted;
                 $affected_asset->save();
             }
@@ -400,7 +373,7 @@ class ViewAssetsController extends Controller
         if ($update_checkout) {
             return redirect()->to('account/view-assets')->with('success', $return_msg);
         } else {
-            return redirect()->to('account/view-assets')->with('error', 'Something went wrong ');
+            return redirect()->to('account/view-assets')->with('error', 'Something went wrong');
         }
     }
 }
