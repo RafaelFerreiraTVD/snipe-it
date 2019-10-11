@@ -3,24 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\Helper;
-use App\Http\Controllers\CheckInOutRequest;
 use App\Models\Asset;
+use App\Models\Loggable;
 use App\Models\Setting;
-use App\Models\User;
+use App\Models\SnipeModel;
+use App\Notifications\BulkCheckoutAssetNotification;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class BulkAssetsController extends Controller
 {
-    use CheckInOutRequest;
+    use CheckInOutRequest, Loggable;
+
+    public static $checkoutClass = BulkCheckoutAssetNotification::class;
+
     /**
      * Display the bulk edit page.
      *
-     * @author [A. Gianotto] [<snipe@snipe.net>]
      * @return View
+     * @throws AuthorizationException
      * @internal param int $assetId
      * @since [v2.0]
+     * @author [A. Gianotto] [<snipe@snipe.net>]
      */
     public function edit(Request $request)
     {
@@ -192,6 +198,7 @@ class BulkAssetsController extends Controller
         try {
             $admin = Auth::user();
 
+            /** @var SnipeModel $target */
             $target = $this->determineCheckoutTarget();
 
             if (!is_array($request->get('selected_assets'))) {
@@ -217,14 +224,34 @@ class BulkAssetsController extends Controller
             }
 
             $errors = [];
+            /** DB */
             DB::transaction(function () use ($target, $admin, $checkout_at, $expected_checkin, $errors, $asset_ids, $request) {
+                $isBulkCheckoutEmail = $request->filled('bulk_email');
+                $note = $request->get('note');
 
-                foreach ($asset_ids as $asset_id) {
+                /** @var Asset[] $assetList */
+                $assetList = [];
+                foreach ($asset_ids as $key => $asset_id) {
+                    /* @var Asset $asset */
                     $asset = Asset::findOrFail($asset_id);
+                    $assetList[$key] = $asset;
                     $this->authorize('checkout', $asset);
-                    $error = $asset->checkOut($target, $admin, $checkout_at, $expected_checkin, e($request->get('note')), null);
+                    $log_id = null;
+                    $error = $asset->checkOut(
+                        $target,
+                        $admin,
+                        $checkout_at,
+                        $expected_checkin,
+                        e($note),
+                        null,
+                        null,
+                        $isBulkCheckoutEmail,
+                        $log_id
+                    );
 
-                    if ($target->location_id!='') {
+                    $assetList[$key]['log_id'] = $log_id;
+
+                    if ($target->location_id !='') {
                         $asset->location_id = $target->location_id;
                         $asset->unsetEventDispatcher();
                         $asset->save();
@@ -233,6 +260,14 @@ class BulkAssetsController extends Controller
                     if ($error) {
                         array_merge_recursive($errors, $asset->getErrors()->toArray());
                     }
+                }
+                // send only 1 email with all assets
+                if ($isBulkCheckoutEmail) {
+                    $checkin_out_dates = [
+                      'checkout' => $checkout_at,
+                      'checkin' => $expected_checkin
+                    ];
+                    $this->logBulkCheckout($target, $note, $assetList, $admin, $checkin_out_dates);
                 }
             });
 

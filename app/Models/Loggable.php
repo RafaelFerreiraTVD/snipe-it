@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Actionlog;
 use App\Models\Asset;
 use App\Models\CheckoutRequest;
+use App\Models\Recipients\AdminRecipient;
 use App\Models\User;
 use App\Notifications\CheckinAssetNotification;
 use App\Notifications\AuditNotification;
@@ -36,7 +37,7 @@ trait Loggable
      * @since [v3.4]
      * @return \App\Models\Actionlog
      */
-    public function logCheckout($note, $target /* What are we checking out to? */)
+    public function logCheckout($note, $target /* What are we checking out to? */, $isBulkCheckoutEmail = false)
     {
         $settings = Setting::getSettings();
         $log = new Actionlog;
@@ -64,16 +65,41 @@ trait Loggable
         $log->note = $note;
         $log->logaction('checkout');
 
+        if(!$isBulkCheckoutEmail) {
+            $params = [
+                'item' => $log->item,
+                'target_type' => $log->target_type,
+                'target' => $target,
+                'admin' => $log->user,
+                'note' => $note,
+                'log_id' => $log->id,
+                'settings' => $settings,
+            ];
+
+            $this->sendNotification($target, $params, $settings);
+        }
+
+        return $log;
+    }
+
+    public function logBulkCheckout ($target, $note, $assets, $admin, $dates) {
+        $settings = Setting::getSettings();
         $params = [
-            'item' => $log->item,
-            'target_type' => $log->target_type,
+            'target_type' => get_class($target),
             'target' => $target,
-            'admin' => $log->user,
+            'admin' => $admin,
             'note' => $note,
-            'log_id' => $log->id,
             'settings' => $settings,
+            'assets' => $assets,
+            'isBulkCheckout' => true,
+            'last_checkout' => $dates['checkout'],
+            'last_checkin' => $dates['checkin'],
         ];
 
+        $this->sendNotification($target, $params, $settings);
+    }
+
+    public function sendNotification ($target, $params, $settings) {
         $checkoutClass = null;
 
         if (method_exists($target, 'notify')) {
@@ -81,13 +107,11 @@ trait Loggable
         }
 
         // Send to the admin, if settings dictate
-        $recipient = new \App\Models\Recipients\AdminRecipient();
+        $recipient = new AdminRecipient();
 
         if (($settings->admin_cc_email!='') && (static::$checkoutClass!='')) {
             $recipient->notify(new static::$checkoutClass($params));
         }
-
-        return $log;
     }
 
     /**
@@ -158,7 +182,7 @@ trait Loggable
         }
 
         // Send to the admin, if settings dictate
-        $recipient = new \App\Models\Recipients\AdminRecipient();
+        $recipient = new AdminRecipient();
 
         if (($settings->admin_cc_email!='') && (static::$checkinClass!='')) {
             $recipient->notify(new static::$checkinClass($params));

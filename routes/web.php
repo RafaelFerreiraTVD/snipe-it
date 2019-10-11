@@ -256,6 +256,14 @@ Route::group([ 'prefix' => 'account', 'middleware' => ['auth']], function () {
         'accept-asset/{logID}',
         [ 'as' => 'account/accept-assets', 'uses' => 'ViewAssetsController@getAcceptAsset' ]
     );
+    Route::get(
+        'bulk-accept-assets/{logsAssets}',
+        [ 'as' => 'account/bulk-accept-assets', 'uses' => 'ViewAssetsController@getBulkAcceptAssets' ]
+    );
+    Route::post(
+        'bulk-accept-assets/{logsAssets}',
+        [ 'as' => 'account/bulk-accept-assets', 'uses' => 'ViewAssetsController@postAcceptAsset' ]
+    );
     Route::post(
         'accept-asset/{logID}',
         [ 'as' => 'account/asset-accepted', 'uses' => 'ViewAssetsController@postAcceptAsset' ]

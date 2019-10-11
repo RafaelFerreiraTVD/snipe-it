@@ -46,6 +46,16 @@
                   </div>
               </div>
 
+              <div class="form-group {{ $errors->has('bulk_email') ? 'error' : '' }}">
+                  {{ Form::label('bulk_email', "Bulk email?", array('class' => 'col-md-3 control-label')) }}
+                  <div class="col-md-8">
+                      <div class="col-md-5">
+                          <input type="checkbox" name="bulk_email" id="bulk_email">
+                      </div>
+                      {!! $errors->first('bulk_email', '<span class="alert-msg"><i class="fa fa-times"></i> :message</span>') !!}
+                  </div>
+              </div>
+
               <!-- Expected Checkin Date -->
               <div class="form-group {{ $errors->has('expected_checkin') ? 'error' : '' }}">
                   {{ Form::label('name', trans('admin/hardware/form.expected_checkin'), array('class' => 'col-md-3 control-label')) }}

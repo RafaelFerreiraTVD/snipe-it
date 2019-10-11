@@ -2,7 +2,7 @@
 
 {{-- Page title --}}
 @section('title')
-    Accept {{ $item->present()->name() }}
+    Accept {{ $name }}
     @parent
 @stop
 
@@ -31,7 +31,7 @@
 <form class="form-horizontal" method="post" action="" autocomplete="off">
   <!-- CSRF Token -->
   <input type="hidden" name="_token" value="{{ csrf_token() }}" />
-  <input type="hidden" name="logId" value="{{ $findlog->id }}" />
+  <input type="hidden" name="logId" value="{{ $ids }}" />
 
 
   <div class="row">
@@ -53,10 +53,10 @@
               </label>
             </div>
 
-            @if ($item->getEula())
+            @if ($eula)
             <div class="col-md-12" style="padding-top: 20px">
               <div id="eula_div">
-                {!!  $item->getEula() !!}
+                {!! $eula !!}
               </div>
             </div>
             @endif
