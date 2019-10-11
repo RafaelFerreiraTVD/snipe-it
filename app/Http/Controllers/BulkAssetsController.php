@@ -246,15 +246,15 @@ class BulkAssetsController extends Controller
                         $log_id
                     );
 
-                    // this is used only for bulk notification on BulkCheckoutAssetNotification
-                    /* @see BulkCheckoutAssetNotification::toMail() */
-                    $assetList[$key]['log_id'] = $log_id;
-
                     if ($target->location_id !='') {
                         $asset->location_id = $target->location_id;
                         $asset->unsetEventDispatcher();
                         $asset->save();
                     }
+
+                    // this is used only for bulk notification on BulkCheckoutAssetNotification
+                    /* @see BulkCheckoutAssetNotification::toMail() */
+                    $assetList[$key]['log_id'] = $log_id;
 
                     if ($error) {
                         array_merge_recursive($errors, $asset->getErrors()->toArray());
