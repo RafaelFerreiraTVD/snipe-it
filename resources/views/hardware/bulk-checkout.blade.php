@@ -38,7 +38,7 @@
                   {{ Form::label('bulk_email', "Bulk email?", array('class' => 'col-md-3 control-label')) }}
                   <div class="col-md-8">
                       <div class="col-md-5">
-                          <input type="checkbox" name="bulk_email" id="bulk_email">
+                          <input type="checkbox" name="bulk_email" id="bulk_email" checked>
                       </div>
                       {!! $errors->first('bulk_email', '<span class="alert-msg"><i class="fa fa-times"></i> :message</span>') !!}
                   </div>

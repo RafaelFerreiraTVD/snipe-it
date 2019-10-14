@@ -222,18 +222,18 @@ class ViewAssetsController extends Controller
 
         $errors = null;
         $assetList = [];
-        $eula = null;
+        $eulaList = [];
 
         foreach ($findlogs as $log) {
             $this->redirectOnError($log);
-            $assetList[] = $log->item;
-            $eula = is_null($eula) ? $log->item->getEula() : $eula;
+            $assetList[] = $log->item->present()->name();
+            $eulaList[] = $log->item->getEula();
         }
 
         $data = [
             "ids" => $logsAssets,
-            "eula" => $eula,
-            "name" => sizeof($assetsIds) == 1 ? $assetList[0]->present()->name() : ''
+            "eulaList" => $eulaList,
+            "assetNames" => $assetList
         ];
 
         return view('account/accept-asset', $data);
@@ -253,8 +253,8 @@ class ViewAssetsController extends Controller
         $logObj = array($logID);
         $data = [
             "ids" => urlencode(base64_encode(json_encode($logObj))),
-            "eula" => $findlog->item->getEula(),
-            "name" => $findlog->item->present()->name()
+            "eulaList" => $findlog->item->getEula(),
+            "assetNames" => $findlog->item->present()->name()
         ];
 
         return view('account/accept-asset', $data);

@@ -2,7 +2,7 @@
 
 {{-- Page title --}}
 @section('title')
-    Accept {{ $name }}
+    Accept
     @parent
 @stop
 
@@ -23,6 +23,7 @@
     width: 100%;
     height: auto;
     overflow: scroll;
+    background-color: #efefef;
 }
 
 </style>
@@ -39,6 +40,12 @@
       <div class="panel box box-default">
         <div class="box-body">
           <div class="col-md-12">
+              <h3>List of assets</h3>
+              <ul>
+                  @foreach($assetNames as $name)
+                    <li>{{$name}}</li>
+                  @endforeach
+              </ul>
             <div class="radio">
               <label>
                 <input type="radio" name="asset_acceptance" id="accepted" value="accepted">
@@ -53,11 +60,14 @@
               </label>
             </div>
 
-            @if ($eula)
+            @if (sizeof($eulaList) > 0)
+
             <div class="col-md-12" style="padding-top: 20px">
-              <div id="eula_div">
-                {!! $eula !!}
-              </div>
+                <div id="eula_div">
+                @foreach($eulaList as $eula)
+                 {!! $eula !!}
+                @endforeach
+                </div>
             </div>
             @endif
 
