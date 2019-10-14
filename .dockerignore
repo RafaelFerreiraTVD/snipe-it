@@ -3,3 +3,4 @@
 app/storage/logs/*
 app/storage/views/*
 vendor/*
+**/node_modules

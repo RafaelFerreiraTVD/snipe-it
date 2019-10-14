@@ -84,16 +84,16 @@ class BulkCheckoutAssetNotification extends Notification
     {
         $assetsFields = [];
         $assetsToAccept = [];
-        $eula = null;
+        $eulaList = [];
 
         foreach ($this->assets as $key => $asset) {
             // Check if the asset has custom fields associated with it
             if (($asset->model) && ($asset->model->fieldset)) {
-                $assetsFields[$key] = $asset->model->fieldset->fields;
+                $assetsFields[$asset['log_id']] = $asset->model->fieldset->fields;
             }
 
-            if (method_exists($asset, 'getEula') && is_null($eula)) {
-                $eula = $asset->getEula();
+            if (method_exists($asset, 'getEula')) {
+                $eulaList[] = $asset->getEula();
             }
 
             if (method_exists($asset, 'requireAcceptance') && $asset->requireAcceptance()) {
@@ -102,13 +102,12 @@ class BulkCheckoutAssetNotification extends Notification
         }
         $req_accept = sizeof($assetsToAccept) > 0 ? 1 : 0;
 
-        $assetsFields = []; // FIXME Remove after fix template
         $params = [
             'admin'         => $this->admin,
             'note'          => $this->note,
             'target'        => $this->target,
-            'fields'        => $assetsFields, // to improve on template (not tested - it may break the template)
-            'eula'          => $eula,
+            'fields'        => $assetsFields,
+            'eulaList'      => $eulaList,
             'req_accept'    => $req_accept,
             'accept_url'    =>  url('/').'/account/bulk-accept-assets/'.urlencode(base64_encode(json_encode($assetsToAccept))),
             'last_checkout' => $this->last_checkout,
