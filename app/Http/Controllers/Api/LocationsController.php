@@ -52,8 +52,9 @@ class LocationsController extends Controller
         }
 
 
-
-        $offset = (($locations) && (request('offset') > $locations->count())) ? 0 : request('offset', 0);
+        // Set the offset to the API call's offset, unless the offset is higher than the actual count of items in which
+        // case we override with the actual count, so we should return 0 items.
+        $offset = (($locations) && ($request->get('offset') > $locations->count())) ? $locations->count() : $request->get('offset', 0);
 
         // Check to make sure the limit is not higher than the max allowed
         ((config('app.max_results') >= $request->input('limit')) && ($request->filled('limit'))) ? $limit = $request->input('limit') : $limit = config('app.max_results');
@@ -148,6 +149,13 @@ class LocationsController extends Controller
     {
         $this->authorize('update', Location::class);
         $location = Location::findOrFail($id);
+
+        if ($request->input('parent_id') == $id) {
+
+            return response()->json(Helper::formatStandardApiResponse('error', null, 'A location cannot be its own parent. Please select a different parent ID.'));
+        }
+
+
         $location->fill($request->all());
 
         if ($location->save()) {
@@ -225,23 +233,28 @@ class LocationsController extends Controller
         }
 
         if ($request->filled('search')) {
-            \Log::debug('Searching... ');
             $locations = $locations->where('locations.name', 'LIKE', '%'.$request->input('search').'%');
         }
 
         $locations = $locations->orderBy('name', 'ASC')->get();
 
         $locations_with_children = [];
+
         foreach ($locations as $location) {
-            if(!array_key_exists($location->parent_id, $locations_with_children)) {
+            if (!array_key_exists($location->parent_id, $locations_with_children)) {
                 $locations_with_children[$location->parent_id] = [];
             }
             $locations_with_children[$location->parent_id][] = $location;
         }
 
-        $location_options = Location::indenter($locations_with_children);
+        if ($request->filled('search')) {
+            $locations_formatted =  $locations;
+        } else {
+            $location_options = Location::indenter($locations_with_children);
+            $locations_formatted = new Collection($location_options);
 
-        $locations_formatted = new Collection($location_options);
+        }
+
         $paginated_results =  new LengthAwarePaginator($locations_formatted->forPage($page, 500), $locations_formatted->count(), 500, $page, []);
 
         //return [];
