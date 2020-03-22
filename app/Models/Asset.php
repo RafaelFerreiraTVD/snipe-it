@@ -195,16 +195,19 @@ class Asset extends Depreciable
 
     /**
      * Checkout asset
-     * @param User $user
+     * @param $target
      * @param User $admin
      * @param Carbon $checkout_at
      * @param Carbon $expected_checkin
      * @param string $note
      * @param null $name
+     * @param null $location
+     * @param bool $isBulkCheckoutEmail
+     * @param $logId
      * @return bool
      */
     //FIXME: The admin parameter is never used. Can probably be removed.
-    public function checkOut($target, $admin = null, $checkout_at = null, $expected_checkin = null, $note = null, $name = null, $location = null)
+    public function checkOut($target, $admin = null, $checkout_at = null, $expected_checkin = null, $note = null, $name = null, $location = null, $isBulkCheckoutEmail = false, &$logId = null)
     {
         if (!$target) {
             return false;
@@ -247,7 +250,10 @@ class Asset extends Depreciable
         }
 
         if ($this->save()) {
-            $this->logCheckout($note, $target);
+            $log = $this->logCheckout($note, $target, $isBulkCheckoutEmail);
+            if ($isBulkCheckoutEmail) {
+                $logId = $log->id;
+            }
             $this->increment('checkout_counter', 1);
             return true;
         }

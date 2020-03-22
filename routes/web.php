@@ -261,6 +261,16 @@ Route::group([ 'prefix' => 'account', 'middleware' => ['auth']], function () {
         [ 'as' => 'account/asset-accepted', 'uses' => 'ViewAssetsController@postAcceptAsset' ]
     );
 
+    # Accept Bulk Assets
+    Route::get(
+        'bulk-accept-assets/{logsAssets}',
+        [ 'as' => 'account/bulk-accept-assets', 'uses' => 'ViewAssetsController@getBulkAcceptAssets' ]
+    );
+    Route::post(
+        'bulk-accept-assets/{logsAssets}',
+        [ 'as' => 'account/bulk-accept-assets', 'uses' => 'ViewAssetsController@postAcceptAsset' ]
+    );
+
     # Profile
     Route::get(
         'requestable-assets',
