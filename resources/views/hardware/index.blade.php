@@ -69,6 +69,14 @@
                   <option value="labels">Generate Labels</option>
                 </select>
                 <button class="btn btn-primary" id="bulkEdit" disabled>Go</button>
+                <label for="category" style="margin-left: 30px;margin-right: 10px">
+                  Category:
+                </label>
+                <select id="category" name="category" class="form-control select2">
+                  @foreach ($categories as $category)
+                    <option value="{{$category->id}}">{{$category->name}}</option>
+                  @endforeach
+                </select>
               </div>
               @endif
 

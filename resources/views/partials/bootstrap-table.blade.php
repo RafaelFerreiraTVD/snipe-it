@@ -571,6 +571,16 @@
         });
     });
 
+    $(() => {
+       $('#category').change(() => {
+           $('.snipe-table').bootstrapTable('refresh', {
+               query: {
+                   category_id: $('#category option:selected').val()
+               }
+           });
+       });
+    });
+
 
     // This is necessary to make the bootstrap tooltips work inside of the
     // wenzhixin/bootstrap-table formatters

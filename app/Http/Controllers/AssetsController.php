@@ -10,6 +10,7 @@ use App\Http\Requests\ItemImportRequest;
 use App\Models\Actionlog;
 use App\Models\Asset;
 use App\Models\AssetModel;
+use App\Models\Category;
 use App\Models\Company;
 use App\Models\CustomField;
 use App\Models\Import;
@@ -76,7 +77,9 @@ class AssetsController extends Controller
         } else {
             $company = null;
         }
-        return view('hardware/index')->with('company', $company);
+
+        $categories = Category::all();
+        return view('hardware/index')->with('company', $company)->with('categories', $categories);
     }
 
     /**
