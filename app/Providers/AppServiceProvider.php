@@ -2,20 +2,21 @@
 namespace App\Providers;
 
 
-use Illuminate\Support\ServiceProvider;
-use Log;
-use Illuminate\Support\Facades\Schema;
-use App\Observers\AssetObserver;
-use App\Observers\LicenseObserver;
-use App\Observers\AccessoryObserver;
-use App\Observers\ConsumableObserver;
-use App\Observers\ComponentObserver;
-use App\Models\Asset;
-use App\Models\License;
 use App\Models\Accessory;
-use App\Models\Consumable;
+use App\Models\Asset;
 use App\Models\Component;
-
+use App\Models\Consumable;
+use App\Models\License;
+use App\Models\Setting;
+use App\Observers\AccessoryObserver;
+use App\Observers\AssetObserver;
+use App\Observers\ComponentObserver;
+use App\Observers\ConsumableObserver;
+use App\Observers\LicenseObserver;
+use App\Observers\SettingObserver;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Routing\UrlGenerator;
 
 /**
  * This service provider handles setting the observers on models
@@ -33,16 +34,22 @@ class AppServiceProvider extends ServiceProvider
      * @since [v3.0]
      * @return void
      */
-    public function boot()
+    public function boot(UrlGenerator $url)
     {
+        if (env('APP_FORCE_TLS')) {
+            if (strpos(env('APP_URL'), 'https') === 0) {
+                $url->forceScheme('https');
+            } else {
+                \Log::warning("'APP_FORCE_TLS' is set to true, but 'APP_URL' does not start with 'https://'. Will not force TLS on connections.");
+            }
+        }
         Schema::defaultStringLength(191);
         Asset::observe(AssetObserver::class);
         Accessory::observe(AccessoryObserver::class);
         Component::observe(ComponentObserver::class);
         Consumable::observe(ConsumableObserver::class);
         License::observe(LicenseObserver::class);
-
-
+        Setting::observe(SettingObserver::class);
     }
 
     /**
@@ -52,15 +59,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $monolog = Log::getMonolog();
-        $log_level = config('app.log_level');
 
-        if (($this->app->environment('production'))  && (config('services.rollbar.access_token'))){
+        if (($this->app->environment('production'))  && (config('logging.channels.rollbar.access_token'))) {
             $this->app->register(\Rollbar\Laravel\RollbarServiceProvider::class);
         }
-        
-        foreach ($monolog->getHandlers() as $handler) {
-            $handler->setLevel($log_level);
-        }
+
     }
 }

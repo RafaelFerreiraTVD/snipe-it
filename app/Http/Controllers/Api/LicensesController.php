@@ -6,6 +6,7 @@ use App\Helpers\Helper;
 use App\Http\Controllers\Controller;
 use App\Http\Transformers\LicenseSeatsTransformer;
 use App\Http\Transformers\LicensesTransformer;
+use App\Http\Transformers\SelectlistTransformer;
 use App\Models\Company;
 use App\Models\License;
 use App\Models\LicenseSeat;
@@ -102,11 +103,33 @@ class LicensesController extends Controller
             case 'category':
                 $licenses = $licenses->leftJoin('categories', 'licenses.category_id', '=', 'categories.id')->orderBy('categories.name', $order);
                 break;
+            case 'depreciation':
+                $licenses = $licenses->leftJoin('depreciations', 'licenses.depreciation_id', '=', 'depreciations.id')->orderBy('depreciations.name', $order);
+                break;
             case 'company':
                 $licenses = $licenses->leftJoin('companies', 'licenses.company_id', '=', 'companies.id')->orderBy('companies.name', $order);
                 break;
             default:
-                $allowed_columns = ['id','name','purchase_cost','expiration_date','purchase_order','order_number','notes','purchase_date','serial','company','category','license_name','license_email','free_seats_count','seats'];
+                $allowed_columns =
+                    [
+                        'id',
+                        'name',
+                        'purchase_cost',
+                        'expiration_date',
+                        'purchase_order',
+                        'order_number',
+                        'notes',
+                        'purchase_date',
+                        'serial',
+                        'company',
+                        'category',
+                        'license_name',
+                        'license_email',
+                        'free_seats_count',
+                        'seats',
+                        'termination_date',
+                        'depreciation_id'
+                    ];
                 $sort = in_array($request->input('sort'), $allowed_columns) ? e($request->input('sort')) : 'created_at';
                 $licenses = $licenses->orderBy($sort, $order);
                 break;
@@ -155,7 +178,7 @@ class LicensesController extends Controller
     public function show($id)
     {
         $this->authorize('view', License::class);
-        $license = License::findOrFail($id);
+        $license = License::withCount('freeSeats')->findOrFail($id);
         $license = $license->load('assignedusers', 'licenseSeats.user', 'licenseSeats.asset');
         return (new LicensesTransformer)->transformLicense($license);
     }
@@ -214,47 +237,28 @@ class LicensesController extends Controller
         }
         return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/licenses/message.assoc_users')));
     }
-
+    
     /**
-     * Get license seat listing
+     * Gets a paginated collection for the select2 menus
      *
-     * @author [A. Gianotto] [<snipe@snipe.net>]
-     * @since [v1.0]
-     * @param int $licenseId
-     * @return \Illuminate\Contracts\View\View
+     * @see \App\Http\Transformers\SelectlistTransformer
      */
-    public function seats(Request $request, $licenseId)
+    public function selectlist(Request $request)
     {
 
-        if ($license = License::find($licenseId)) {
+        $licenses = License::select([
+            'licenses.id',
+            'licenses.name'
+        ]);
 
-            $this->authorize('view', $license);
-
-            $seats = LicenseSeat::where('license_seats.license_id', $licenseId)
-                ->with('license', 'user', 'asset', 'user.department');
-
-            $order = $request->input('order') === 'asc' ? 'asc' : 'desc';
-
-            if ($request->input('sort')=='department') {
-                $seats->OrderDepartments($order);
-            } else {
-                $seats->orderBy('id', $order);
-            }
-
-            $total = $seats->count();
-            $offset = (($seats) && (request('offset') > $total)) ? 0 : request('offset', 0);
-            $limit = request('limit', 50);
-            
-            $seats = $seats->skip($offset)->take($limit)->get();
-
-            if ($seats) {
-                return (new LicenseSeatsTransformer)->transformLicenseSeats($seats, $total);
-            }
-
+        if ($request->filled('search')) {
+            $licenses = $licenses->where('licenses.name', 'LIKE', '%'.$request->get('search').'%');
         }
 
-        return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/licenses/message.does_not_exist')), 200);
+        $licenses = $licenses->orderBy('name', 'ASC')->paginate(50);
 
+
+        return (new SelectlistTransformer)->transformSelectlist($licenses);
     }
 
 

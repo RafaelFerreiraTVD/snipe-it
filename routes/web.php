@@ -22,6 +22,16 @@ Route::group(['middleware' => 'auth'], function () {
     Route::resource('locations', 'LocationsController', [
         'parameters' => ['location' => 'location_id']
     ]);
+    
+    Route::get(
+        'locations/{locationId}/printassigned',
+        [ 'as' => 'locations.print_assigned', 'uses' => 'LocationsController@print_assigned' ]
+    );
+    
+    Route::get(
+        'locations/{locationId}/printallassigned',
+        [ 'as' => 'locations.print_all_assigned', 'uses' => 'LocationsController@print_all_assigned' ]
+    );
 
     /*
     * Manufacturers
@@ -59,13 +69,6 @@ Route::group(['middleware' => 'auth'], function () {
 
 
     /*
-    * Status Labels
-    */
-    Route::resource('components', 'ComponentsController', [
-        'parameters' => ['component' => 'component_id']
-    ]);
-
-    /*
     * Departments
     */
     Route::resource('departments', 'DepartmentsController', [
@@ -87,13 +90,7 @@ Route::group(['middleware' => 'auth'], function () {
 */
 
 Route::group(['middleware' => 'auth','prefix' => 'modals'], function () {
-    Route::get('location',['as' => 'modal.location','uses' => 'ModalController@location']);
-    Route::get('category',['as' => 'modal.category','uses' => 'ModalController@category']);
-    Route::get('manufacturer',['as' => 'modal.manufacturer','uses' => 'ModalController@manufacturer']);
-    Route::get('model',['as' => 'modal.model','uses' => 'ModalController@model']);
-    Route::get('statuslabel',['as' => 'modal.statuslabel','uses' => 'ModalController@statuslabel']);
-    Route::get('supplier',['as' => 'modal.supplier','uses' => 'ModalController@supplier']);
-    Route::get('user',['as' => 'modal.user','uses' => 'ModalController@user']);
+    Route::get('{type}/{itemId?}',['as' => 'modal.show', 'uses' => 'ModalController@show']);
 });
 
 /*
@@ -172,6 +169,8 @@ Route::group([ 'prefix' => 'admin','middleware' => ['auth', 'authorize:superuser
 
     Route::get('purge', ['as' => 'settings.purge.index', 'uses' => 'SettingsController@getPurge']);
     Route::post('purge', ['as' => 'settings.purge.save', 'uses' => 'SettingsController@postPurge']);
+
+    Route::get('login-attempts', ['as' => 'settings.logins.index','uses' => 'SettingsController@getLoginAttempts' ]);
 
     # Backups
     Route::group([ 'prefix' => 'backups', 'middleware' => 'auth' ], function () {
@@ -256,10 +255,6 @@ Route::group([ 'prefix' => 'account', 'middleware' => ['auth']], function () {
         'accept-asset/{logID}',
         [ 'as' => 'account/accept-assets', 'uses' => 'ViewAssetsController@getAcceptAsset' ]
     );
-    Route::post(
-        'accept-asset/{logID}',
-        [ 'as' => 'account/asset-accepted', 'uses' => 'ViewAssetsController@postAcceptAsset' ]
-    );
 
     # Profile
     Route::get(
@@ -278,6 +273,15 @@ Route::group([ 'prefix' => 'account', 'middleware' => ['auth']], function () {
 
     # Account Dashboard
     Route::get('/', [ 'as' => 'account', 'uses' => 'ViewAssetsController@getIndex' ]);
+
+
+    Route::get('accept', 'Account\AcceptanceController@index')
+        ->name('account.accept');
+        
+    Route::get('accept/{id}', 'Account\AcceptanceController@create')
+        ->name('account.accept.item');
+
+    Route::post('accept/{id}', 'Account\AcceptanceController@store');        
 
 });
 
@@ -329,6 +333,9 @@ Route::group(['middleware' => ['auth']], function () {
         'reports/activity',
         [ 'as' => 'reports.activity', 'uses' => 'ReportsController@getActivityReport' ]
     );
+
+    Route::post('reports/activity', 'ReportsController@postActivityReport');
+
 
 
     Route::get(
@@ -467,5 +474,4 @@ Route::group(['middleware' => 'web'], function () {
 
 Auth::routes();
 
-
-
+Route::get('/health', [ 'as' => 'health', 'uses' => 'HealthController@get']);

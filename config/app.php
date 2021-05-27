@@ -197,18 +197,32 @@ return [
 
 
     /*
-    |--------------------------------------------------------------------------
-    | ALLOW I-FRAMING
-    |--------------------------------------------------------------------------
-    |
-    | Normal users will never need to edit this. This option lets you run
-    | Snipe-IT within an I-Frame, which is normally disabled by default for
-    | security reasons, to prevent clickjacking. It should normally be set to false.
-    |
-    */
+   |--------------------------------------------------------------------------
+   | ALLOW I-FRAMING
+   |--------------------------------------------------------------------------
+   |
+   | Normal users will never need to edit this. This option lets you run
+   | Snipe-IT within an I-Frame, which is normally disabled by default for
+   | security reasons, to prevent clickjacking. It should normally be set to false.
+   |
+   */
 
     'allow_iframing' => env('ALLOW_IFRAMING', false),
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | ENABLE HTTP Strict Transport Security (HSTS)
+    |--------------------------------------------------------------------------
+    |
+    | This is set to default false for backwards compatibilty but should be
+    | set to true if the hosting environment allows it.
+    |
+    | See https://scotthelme.co.uk/hsts-the-missing-link-in-tls/
+    |
+    */
+
+    'enable_hsts' => env('ENABLE_HSTS', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -254,6 +268,18 @@ return [
     */
 
     'lock_passwords' => env('APP_LOCKED', false),
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Minimum PHP version
+    |--------------------------------------------------------------------------
+    |
+    | Do not change this variable.
+    |
+    */
+
+    'min_php' => '7.2.5',
 
 
     /*
@@ -307,7 +333,6 @@ return [
         Laravel\Passport\PassportServiceProvider::class,
         Laravel\Tinker\TinkerServiceProvider::class,
         Unicodeveloper\DumbPassword\DumbPasswordServiceProvider::class,
-        Schuppo\PasswordStrength\PasswordStrengthServiceProvider::class,
         Tightenco\Ziggy\ZiggyServiceProvider::class, // Laravel routes in vue
         Eduardokum\LaravelMailAutoEmbed\ServiceProvider::class,
 
@@ -326,6 +351,8 @@ return [
         * Custom service provider
         */
         App\Providers\MacroServiceProvider::class,
+        App\Providers\LdapServiceProvider::class,
+        App\Providers\SamlServiceProvider::class,
 
 
     ],
@@ -375,12 +402,10 @@ return [
         'URL' => Illuminate\Support\Facades\URL::class,
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
-        'Input' => Illuminate\Support\Facades\Input::class,
         'Form'      => Collective\Html\FormFacade::class,
         'Html'      => Collective\Html\HtmlFacade::class,
-        'Google2FA' => PragmaRX\Google2FA\Vendor\Laravel\Facade::class,
-        'Debugbar' => Barryvdh\Debugbar\Facade::class,
-        'Image'     => Intervention\Image\ImageManagerStatic::class,
+        'Google2FA' => PragmaRX\Google2FALaravel\Facade::class,
+        'Image'     => Intervention\Image\ImageServiceProvider::class,
         'Carbon' => Carbon\Carbon::class,
 
 

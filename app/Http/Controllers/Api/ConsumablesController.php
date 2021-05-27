@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
+use App\Helpers\Helper;
 use App\Http\Controllers\Controller;
+use App\Http\Transformers\ConsumablesTransformer;
+use App\Http\Transformers\SelectlistTransformer;
 use App\Models\Company;
 use App\Models\Consumable;
-use App\Http\Transformers\ConsumablesTransformer;
-use App\Helpers\Helper;
+use App\Models\User;
+use Illuminate\Http\Request;
 
 class ConsumablesController extends Controller
 {
@@ -157,11 +159,11 @@ class ConsumablesController extends Controller
         return response()->json(Helper::formatStandardApiResponse('success', null,  trans('admin/consumables/message.delete.success')));
     }
 
-        /**
+    /**
     * Returns a JSON response containing details on the users associated with this consumable.
     *
     * @author [A. Gianotto] [<snipe@snipe.net>]
-    * @see ConsumablesController::getView() method that returns the form.
+    * @see \App\Http\Controllers\Consumables\ConsumablesController::getView() method that returns the form.
     * @since [v1.0]
     * @param int $consumableId
     * @return array
@@ -195,5 +197,80 @@ class ConsumablesController extends Controller
         $consumableCount = $consumable->users->count();
         $data = array('total' => $consumableCount, 'rows' => $rows);
         return $data;
+    }
+
+    /**
+     * Checkout a consumable
+     *
+     * @author [A. Gutierrez] [<andres@baller.tv>]
+     * @param int $id
+     * @since [v4.9.5]
+     * @return JsonResponse
+     */
+    public function checkout(Request $request, $id)
+    {
+        // Check if the consumable exists
+        if (is_null($consumable = Consumable::find($id))) {
+            return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/consumables/message.does_not_exist')));
+        }
+
+        $this->authorize('checkout', $consumable);
+
+        if ($consumable->qty > 0) {
+
+            // Check if the user exists
+            $assigned_to = $request->input('assigned_to');
+            if (is_null($user = User::find($assigned_to))) {
+                // Return error message
+                return response()->json(Helper::formatStandardApiResponse('error', null, 'No user found'));
+            }
+
+            // Update the consumable data
+            $consumable->assigned_to = e($assigned_to);
+
+            $consumable->users()->attach($consumable->id, [
+                'consumable_id' => $consumable->id,
+                'user_id' => $user->id,
+                'assigned_to' => $assigned_to
+            ]);
+
+            // Log checkout event
+            $logaction = $consumable->logCheckout(e($request->input('note')), $user);
+            $data['log_id'] = $logaction->id;
+            $data['eula'] = $consumable->getEula();
+            $data['first_name'] = $user->first_name;
+            $data['item_name'] = $consumable->name;
+            $data['checkout_date'] = $logaction->created_at;
+            $data['note'] = $logaction->note;
+            $data['require_acceptance'] = $consumable->requireAcceptance();
+
+            return response()->json(Helper::formatStandardApiResponse('success', null,  trans('admin/consumables/message.checkout.success')));
+        }
+
+        return response()->json(Helper::formatStandardApiResponse('error', null, 'No consumables remaining'));
+    }
+
+    /**
+    * Gets a paginated collection for the select2 menus
+    *
+    * @see \App\Http\Transformers\SelectlistTransformer
+    *
+    */
+    public function selectlist(Request $request)
+    {
+
+        $consumables = Consumable::select([
+            'consumables.id',
+            'consumables.name'
+        ]);
+
+        if ($request->filled('search')) {
+            $consumables = $consumables->where('consumables.name', 'LIKE', '%'.$request->get('search').'%');
+        }
+
+        $consumables = $consumables->orderBy('name', 'ASC')->paginate(50);
+
+
+        return (new SelectlistTransformer)->transformSelectlist($consumables);
     }
 }

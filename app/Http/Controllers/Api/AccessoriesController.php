@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use App\Helpers\Helper;
-use App\Models\Accessory;
+use App\Http\Controllers\Controller;
 use App\Http\Transformers\AccessoriesTransformer;
+use App\Http\Transformers\SelectlistTransformer;
+use App\Models\Accessory;
 use App\Models\Company;
 use App\Models\User;
 use Carbon\Carbon;
 use Auth;
 use DB;
+use Illuminate\Http\Request;
 
 class AccessoriesController extends Controller
 {
@@ -141,18 +142,36 @@ class AccessoriesController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function checkedout($id)
+    public function checkedout($id, Request $request)
     {
         $this->authorize('view', Accessory::class);
 
-        $accessory = Accessory::findOrFail($id);
+        $accessory = Accessory::with('lastCheckout')->findOrFail($id);
         if (!Company::isCurrentUserHasAccess($accessory)) {
             return ['total' => 0, 'rows' => []];
         }
+
+        $offset = request('offset', 0);
+        $limit = request('limit', 50);
+
         $accessory_users = $accessory->users;
         $total = $accessory_users->count();
 
-        return (new AccessoriesTransformer)->transformCheckedoutAccessory($accessory_users, $total);
+        if($total < $offset){
+            $offset = 0;
+        }
+
+        $accessory_users = $accessory->users()->skip($offset)->take($limit)->get();
+
+        if ($request->filled('search')) {
+            $accessory_users = $accessory->users()
+                                ->where('first_name', 'like', '%'.$request->input('search').'%')
+                                ->orWhere('last_name', 'like', '%'.$request->input('search').'%')
+                                ->get();
+            $total = $accessory_users->count();
+        }
+
+        return (new AccessoriesTransformer)->transformCheckedoutAccessory($accessory, $accessory_users, $total);
     }
 
 
@@ -167,7 +186,7 @@ class AccessoriesController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->authorize('edit', Accessory::class);
+        $this->authorize('update', Accessory::class);
         $accessory = Accessory::findOrFail($id);
         $accessory->fill($request->all());
 
@@ -235,7 +254,8 @@ class AccessoriesController extends Controller
                 'accessory_id' => $accessory->id,
                 'created_at' => Carbon::now(),
                 'user_id' => Auth::id(),
-                'assigned_to' => $request->get('assigned_to')
+                'assigned_to' => $request->get('assigned_to'),
+                'note' => $request->get('note')
             ]);
 
             $accessory->logCheckout($request->input('note'), $user);
@@ -267,7 +287,7 @@ class AccessoriesController extends Controller
         $accessory = Accessory::find($accessory_user->accessory_id);
         $this->authorize('checkin', $accessory);
 
-        $logaction = $accessory->logCheckin(User::find($accessoryUserId), $request->input('note'));
+        $logaction = $accessory->logCheckin(User::find($accessory_user->user_id), $request->input('note'));
 
         // Was the accessory updated?
         if (DB::table('accessories_users')->where('id', '=', $accessory_user->id)->delete()) {
@@ -289,5 +309,32 @@ class AccessoriesController extends Controller
         return response()->json(Helper::formatStandardApiResponse('error', null,  trans('admin/accessories/message.checkin.error')));
 
     }
+
+
+    /**
+    * Gets a paginated collection for the select2 menus
+    *
+    * @see \App\Http\Transformers\SelectlistTransformer
+    *
+    */
+    public function selectlist(Request $request)
+    {
+
+        $accessories = Accessory::select([
+            'accessories.id',
+            'accessories.name'
+        ]);
+
+        if ($request->filled('search')) {
+            $accessories = $accessories->where('accessories.name', 'LIKE', '%'.$request->get('search').'%');
+        }
+
+        $accessories = $accessories->orderBy('name', 'ASC')->paginate(50);
+
+
+        return (new SelectlistTransformer)->transformSelectlist($accessories);
+    }
+
+
 
 }

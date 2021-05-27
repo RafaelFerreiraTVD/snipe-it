@@ -146,6 +146,7 @@ class AssetPresenter extends Presenter
                 "searchable" => true,
                 "sortable" => true,
                 "title" => trans('general.purchase_cost'),
+                "formatter" => 'numberWithCommas',
                 "footerFormatter" => 'sumFormatter',
             ], [
                 "field" => "order_number",
@@ -268,8 +269,11 @@ class AssetPresenter extends Presenter
                 "searchable" => true,
                 "sortable" => true,
                 "switchable" => true,
-                "title" => ($field->field_encrypted=='1') ?'<i class="fa fa-lock"></i> '.$field->name : $field->name,
-                "formatter" => "customFieldsFormatter"
+                "title" => $field->name,
+                "formatter"=> 'customFieldsFormatter',
+                "escape" => true,
+                "class" => ($field->field_encrypted=='1') ? 'css-padlock' : '',
+                "visible" => true,
             ];
 
         }
@@ -324,12 +328,14 @@ class AssetPresenter extends Presenter
         $imagePath = '';
         if ($this->image && !empty($this->image)) {
             $imagePath = $this->image;
+            $imageAlt = $this->name;
         } elseif ($this->model && !empty($this->model->image)) {
             $imagePath = $this->model->image;
+            $imageAlt = $this->model->name;
         }
         $url = config('app.url');
         if (!empty($imagePath)) {
-            $imagePath = "<img src='{$url}/uploads/assets/{$imagePath}' height=50 width=50>";
+            $imagePath = '<img src="'.$url.'/uploads/assets/'.$imagePath.' height="50" width="50" alt="'.$imageAlt.'">';
         }
         return $imagePath;
     }
@@ -355,18 +361,13 @@ class AssetPresenter extends Presenter
     /**
      * Get Displayable Name
      * @return string
+     *
+     * @todo this should be factored out - it should be subsumed by fullName (below)
+     *
      **/
     public function name()
     {
-
-        if (empty($this->model->name)) {
-            if (isset($this->model->model)) {
-                return $this->model->model->name.' ('.$this->model->asset_tag.')';
-            }
-            return $this->model->asset_tag;
-        }
-        return $this->model->name . ' (' . $this->model->asset_tag . ')';
-
+        return $this->fullName;
     }
 
     /**
@@ -376,13 +377,18 @@ class AssetPresenter extends Presenter
     public function fullName()
     {
         $str = '';
+
+        // Asset name
         if ($this->model->name) {
-            $str .= $this->name;
+            $str .= $this->model->name;
         }
 
+        // Asset tag
         if ($this->asset_tag) {
             $str .= ' ('.$this->model->asset_tag.')';
         }
+
+        // Asset Model name
         if ($this->model->model) {
             $str .= ' - '.$this->model->model->name;
         }
@@ -516,6 +522,6 @@ class AssetPresenter extends Presenter
 
     public function glyph()
     {
-        return '<i class="fa fa-barcode"></i>';
+        return '<i class="fa fa-barcode" aria-hidden="true"></i>';
     }
 }

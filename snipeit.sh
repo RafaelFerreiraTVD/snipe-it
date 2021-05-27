@@ -67,7 +67,7 @@ clear
 
 readonly APP_USER="snipeitapp"
 readonly APP_NAME="snipeit"
-readonly APP_PATH="/var/www/$APP_NAME"
+readonly APP_PATH="/var/www/html/$APP_NAME"
 
 progress () {
   spin[0]="-"
@@ -102,6 +102,16 @@ install_packages () {
         else
           echo "  * Installing $p"
           log "DEBIAN_FRONTEND=noninteractive apt-get install -y $p"
+        fi
+      done;
+      ;;
+    raspbian)
+      for p in $PACKAGES; do
+        if dpkg -s "$p" >/dev/null 2>&1; then
+          echo "  * $p already installed"
+        else
+          echo "  * Installing $p"
+          log "DEBIAN_FRONTEND=noninteractive apt-get install -y -t buster $p"
         fi
       done;
       ;;
@@ -146,8 +156,8 @@ create_virtualhost () {
 create_user () {
   echo "* Creating Snipe-IT user."
 
-  if [ "$distro" == "ubuntu" ] || [ "$distro" == "debian" ] ; then
-    adduser --quiet --disabled-password --gecos '""' "$APP_USER"
+  if [[ "$distro" == "ubuntu" ]] || [[ "$distro" == "debian" ]] || [[ "$distro" == "raspbian" ]] ; then
+    adduser --quiet --disabled-password --gecos 'Snipe-IT User' "$APP_USER"
   else
     adduser "$APP_USER"
   fi
@@ -201,7 +211,7 @@ install_snipeit () {
   sed -i "s|^\\(DB_HOST=\\).*|\\1localhost|" "$APP_PATH/.env"
   sed -i "s|^\\(DB_DATABASE=\\).*|\\1snipeit|" "$APP_PATH/.env"
   sed -i "s|^\\(DB_USERNAME=\\).*|\\1snipeit|" "$APP_PATH/.env"
-  sed -i "s|^\\(DB_PASSWORD=\\).*|\\1$mysqluserpw|" "$APP_PATH/.env"
+  sed -i "s|^\\(DB_PASSWORD=\\).*|\\1'$mysqluserpw'|" "$APP_PATH/.env"
   sed -i "s|^\\(APP_URL=\\).*|\\1http://$fqdn|" "$APP_PATH/.env"
 
   echo "* Installing composer."
@@ -255,7 +265,13 @@ set_hosts () {
   echo >> /etc/hosts "127.0.0.1 $(hostname) $fqdn"
 }
 
-if [[ -f /etc/lsb-release || -f /etc/debian_version ]]; then
+rename_default_vhost () {
+    log "mv /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-enabled/111-default.conf"
+    log "mv /etc/apache2/sites-enabled/snipeit.conf /etc/apache2/sites-enabled/000-snipeit.conf"
+}
+
+
+if [[ -f /etc/debian_version || -f /etc/lsb-release ]]; then
   distro="$(lsb_release -is)"
   version="$(lsb_release -rs)"
   codename="$(lsb_release -cs)"
@@ -295,7 +311,13 @@ case $distro in
     apache_group=www-data
     apachefile=/etc/apache2/sites-available/$APP_NAME.conf
     ;;
-  *debian*)
+  *Raspbian*)
+    echo "  The installer has detected $distro version $version codename $codename."
+    distro=raspbian
+    apache_group=www-data
+    apachefile=/etc/apache2/sites-available/$APP_NAME.conf
+    ;;
+  *Debian|debian*)
     echo "  The installer has detected $distro version $version codename $codename."
     distro=debian
     apache_group=www-data
@@ -314,7 +336,7 @@ case $distro in
     apachefile=/etc/httpd/conf.d/$APP_NAME.conf
     ;;
   *)
-    echo "  The installer was unable to determine your OS. Exiting for safety."
+    echo "   The installer was unable to determine your OS. Exiting for safety. Exiting for safety."
     exit 1
     ;;
 esac
@@ -352,7 +374,39 @@ done
 
 case $distro in
   debian)
-  if [[ "$version" =~ ^9 ]]; then
+  if [[ "$version" =~ ^10 ]]; then
+    # Install for Debian 10.x
+    tzone=$(cat /etc/timezone)
+
+    echo "* Adding PHP repository."
+    log "apt-get install -y apt-transport-https lsb-release ca-certificates"
+    log "wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg"
+    echo "deb https://packages.sury.org/php/ $codename main" > /etc/apt/sources.list.d/php.list
+
+    echo -n "* Updating installed packages."
+    log "apt-get update && apt-get -y upgrade" & pid=$!
+    progress
+
+    echo "* Installing Apache httpd, PHP, MariaDB and other requirements."
+    PACKAGES="mariadb-server mariadb-client apache2 libapache2-mod-php7.3 php7.3 php7.3-mcrypt php7.3-curl php7.3-mysql php7.3-gd php7.3-ldap php7.3-zip php7.3-mbstring php7.3-xml php7.3-bcmath curl git unzip"
+    install_packages
+
+    echo "* Configuring Apache."
+    create_virtualhost
+    log "a2enmod rewrite"
+    log "a2ensite $APP_NAME.conf"
+	rename_default_vhost
+
+    set_hosts
+
+    echo "* Securing MariaDB."
+    /usr/bin/mysql_secure_installation
+
+    install_snipeit
+
+    echo "* Restarting Apache httpd."
+    log "service apache2 restart"
+  elif [[ "$version" =~ ^9 ]]; then
     # Install for Debian 9.x
     tzone=$(cat /etc/timezone)
 
@@ -366,13 +420,14 @@ case $distro in
     progress
 
     echo "* Installing Apache httpd, PHP, MariaDB and other requirements."
-    PACKAGES="mariadb-server mariadb-client apache2 libapache2-mod-php7.1 php7.1 php7.1-mcrypt php7.1-curl php7.1-mysql php7.1-gd php7.1-ldap php7.1-zip php7.1-mbstring php7.1-xml php7.1-bcmath curl git unzip"
+    PACKAGES="mariadb-server mariadb-client apache2 libapache2-mod-php7.4 php7.4 php7.4-mcrypt php7.4-curl php7.4-mysql php7.4-gd php7.4-ldap php7.4-zip php7.4-mbstring php7.4-xml php7.4-bcmath curl git unzip"
     install_packages
 
     echo "* Configuring Apache."
     create_virtualhost
     log "a2enmod rewrite"
     log "a2ensite $APP_NAME.conf"
+	rename_default_vhost
 
     set_hosts
 
@@ -399,13 +454,14 @@ case $distro in
     progress
 
     echo "* Installing Apache httpd, PHP, MariaDB and other requirements."
-    PACKAGES="mariadb-server mariadb-client php7.1 php7.1-mcrypt php7.1-curl php7.1-mysql php7.1-gd php7.1-ldap php7.1-zip php7.1-mbstring php7.1-xml php7.1-bcmath curl git unzip"
+    PACKAGES="mariadb-server mariadb-client php7.4 php7.4-mcrypt php7.4-curl php7.4-mysql php7.4-gd php7.4-ldap php7.4-zip php7.4-mbstring php7.4-xml php7.4-bcmath curl git unzip"
     install_packages
 
     echo "* Configuring Apache."
     create_virtualhost
     log "a2enmod rewrite"
     log "a2ensite $APP_NAME.conf"
+	rename_default_vhost
 
     set_hosts
 
@@ -422,7 +478,7 @@ case $distro in
   fi
   ;;
   ubuntu)
-  if [ "$version" == "18.04" ]; then
+  if [ "${version//./}" -ge "1804" ]; then
     # Install for Ubuntu 18.04
     tzone=$(cat /etc/timezone)
 
@@ -440,6 +496,7 @@ case $distro in
     log "phpenmod mbstring"
     log "a2enmod rewrite"
     log "a2ensite $APP_NAME.conf"
+	rename_default_vhost
 
     set_hosts
 
@@ -468,7 +525,7 @@ case $distro in
     progress
 
     echo "* Installing Apache httpd, PHP, MariaDB and other requirements."
-    PACKAGES="mariadb-server mariadb-client apache2 libapache2-mod-php7.1 php7.1 php7.1-mcrypt php7.1-curl php7.1-mysql php7.1-gd php7.1-ldap php7.1-zip php7.1-mbstring php7.1-xml php7.1-bcmath curl git unzip"
+    PACKAGES="mariadb-server mariadb-client apache2 libapache2-mod-php7.4 php7.4 php7.4-mcrypt php7.4-curl php7.4-mysql php7.4-gd php7.4-ldap php7.4-zip php7.4-mbstring php7.4-xml php7.4-bcmath curl git unzip"
     install_packages
 
     echo "* Configuring Apache."
@@ -505,7 +562,7 @@ case $distro in
     progress
 
     echo "* Installing Apache httpd, PHP, MariaDB and other requirements."
-    PACKAGES="mariadb-server mariadb-client php7.1 php7.1-mcrypt php7.1-curl php7.1-mysql php7.1-gd php7.1-ldap php7.1-zip php7.1-mbstring php7.1-xml php7.1-bcmath curl git unzip"
+    PACKAGES="mariadb-server mariadb-client php7.4 php7.4-mcrypt php7.4-curl php7.4-mysql php7.4-gd php7.4-ldap php7.4-zip php7.4-mbstring php7.4-xml php7.4-bcmath curl git unzip"
     install_packages
 
     echo "* Configuring Apache."
@@ -529,6 +586,56 @@ case $distro in
     log "service apache2 restart"
   else
     echo "Unsupported Ubuntu version. Version found: $version"
+    exit 1
+  fi
+  ;;
+  raspbian)
+  if [[ "$version" =~ ^10 ]]; then
+    # Install for Raspbian 9.x
+    tzone=$(cat /etc/timezone)
+    cat >/etc/apt/sources.list.d/10-buster.list <<EOL
+deb http://mirrordirector.raspbian.org/raspbian/ buster main contrib non-free rpi
+EOL
+
+    cat >/etc/apt/preferences.d/10-buster <<EOL
+Package: *
+Pin: release n=stretch
+Pin-Priority: 900
+
+Package: *
+Pin: release n=buster
+Pin-Priority: 750
+EOL
+
+    echo -n "* Updating installed packages."
+    log "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y upgrade" & pid=$!
+    progress
+
+    echo "* Installing Apache httpd, PHP, MariaDB and other requirements."
+    PACKAGES="mariadb-server mariadb-client apache2 libapache2-mod-php7.2 php7.2 php7.2-mcrypt php7.2-curl php7.2-mysql php7.2-gd php7.2-ldap php7.2-zip php7.2-mbstring php7.2-xml php7.2-bcmath curl git unzip"
+    install_packages
+
+    echo "* Configuring Apache."
+    create_virtualhost
+    log "phpenmod mcrypt"
+    log "phpenmod mbstring"
+    log "a2enmod rewrite"
+    log "a2ensite $APP_NAME.conf"
+
+    set_hosts
+
+    echo "* Starting MariaDB."
+    log "systemctl start mariadb.service"
+
+    echo "* Securing MariaDB."
+    /usr/bin/mysql_secure_installation
+
+    install_snipeit
+
+    echo "* Restarting Apache httpd."
+    log "systemctl restart apache2"
+  else
+    echo "Unsupported Raspbian version. Version found: $version"
     exit 1
   fi
   ;;

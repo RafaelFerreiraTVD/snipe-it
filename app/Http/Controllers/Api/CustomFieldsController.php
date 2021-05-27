@@ -9,7 +9,6 @@ use App\Models\CustomField;
 use App\Models\CustomFieldset;
 use Illuminate\Http\Request;
 use Validator;
-use Illuminate\Validation\Rule;
 
 class CustomFieldsController extends Controller
 {
@@ -59,9 +58,9 @@ class CustomFieldsController extends Controller
     {
         $this->authorize('update', CustomField::class);
         $field = CustomField::findOrFail($id);
-        
+
         /**
-         * Updated values for the field, 
+         * Updated values for the field,
          * without the "field_encrypted" flag, preventing the change of encryption status
          * @var array
          */
@@ -96,7 +95,14 @@ class CustomFieldsController extends Controller
         $field = new CustomField;
 
         $data = $request->all();
-        $validator = Validator::make($data, $field->validationRules());
+        $regex_format = null;
+        
+        if (str_contains($data["format"], "regex:")){
+            $regex_format = $data["format"];
+        }
+
+        $validator = Validator::make($data, $field->validationRules($regex_format));
+
         if ($validator->fails()) {
             return response()->json(Helper::formatStandardApiResponse('error', null, $validator->errors()));
         }
